@@ -1,7 +1,8 @@
 import json
 from colorama import init, Fore, Back, Style 
 init(convert=True)
-# Reutrns the count of all low, medium, and high severity CPEs
+
+# Reutrns the count of all low, medium, high, and critical severity CPEs
 def count_severity():
     with open("nvdcve-1.0-modified.json", "r") as f:
         data = json.load(f)
@@ -10,6 +11,7 @@ def count_severity():
     low = 0
     med = 0
     high = 0
+    critical = 0
 
     for vul in x:
         if "baseMetricV2" in vul["impact"].keys():
