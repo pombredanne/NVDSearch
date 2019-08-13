@@ -253,5 +253,5 @@ def automatic():
             # Establish secure connection
             server = smtplib.SMTP("spo-smtp.itron.com", "25") # (smtp server, port number)
             server.sendmail("NVDItronReport", email, message)
-# manual()
+            
 automatic()
