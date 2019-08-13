@@ -1,10 +1,17 @@
 import json
+import ssl
+import smtplib
 from colorama import init, Fore, Back, Style 
 init(convert=True)
 
+FILE = "nvdcve-1.0-modified.json"
+port = 465
+
+
+
 # Reutrns the count of all low, medium, high, and critical severity CPEs
 def count_severity():
-    with open("nvdcve-1.0-modified.json", "r") as f:
+    with open(FILE, "r") as f:
         data = json.load(f)
 
     x = data["CVE_Items"]
@@ -36,7 +43,7 @@ def count_severity():
     return low, med, high
 
 def get_vendors():
-    with open("nvdcve-1.0-modified.json", "r") as f:
+    with open(FILE, "r") as f:
         data = json.load(f)
 
     x = data["CVE_Items"]
@@ -93,11 +100,12 @@ def search(product, version, severity):
     else:
         print("Please specify the severity as either LOW, MEDIUM, HIGH, or CRITICAL")
         return
-    with open("nvdcve-1.0-modified.json", "r") as f:
+    with open(FILE, "r") as f:
         x = json.load(f)
 
     data = x["CVE_Items"]
     vuls = []
+    result = ""
     for vul in data:
         valid = True
         if len(vul["cve"]["affects"]["vendor"]["vendor_data"]) > 0 and (vul["cve"]["affects"]["vendor"]["vendor_data"][0].get("vendor_name") == product):  # If the vulnerability has vendor data and matches our search
@@ -142,24 +150,37 @@ def search(product, version, severity):
                     else:
                         level = "HIGH"
                 if level == "LOW":
+                    result += "Severity: " + level + "\n"
                     print("Severity: " + Fore.YELLOW + level)
                 elif level == "MEDIUM":
+                    result += "Severity: " + level + "\n"
                     print("Severity: " + Fore.YELLOW + level)
                 elif level == "HIGH":
+                    result += "Severity: " + level + "\n"
                     print("Severity: " + Fore.RED + level)
                 elif level == "CRITICAL":
+                    result += "Severity: " + level + "\n"
                     print("Severity: " + Fore.RED + level)
                 print(Fore.WHITE + "Description: " + vul["cve"]["description"]["description_data"][0].get("value"))
                 print("Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID"))
-                print()
+                result += "Description: " + vul["cve"]["description"]["description_data"][0].get("value") + "\n"
+                result += "Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID") + "\n\n"
+    return result
 
 
 print(Fore.GREEN + 'NVD Searcher v0.1')
 print("-----------------")
+responses = []
 while True:
-    print(Fore.WHITE + "Please enter your search in the following format:")
+    if len(responses) != 0:
+        print("Search terms:")
+        for resp in responses:
+            print("   " + resp)
+        print()
+    print(Fore.WHITE + "Please enter your search terms in the following format:")
     print("PRODUCT VERSION SEVERITY")
-    print("Or type 'help' or 'quit'")
+    print("Or type 'help' for help")
+    print("or 'done' to begin the search.")
     print()
     response = input("Response: ")
     if response == "help":
@@ -171,16 +192,30 @@ while True:
         print("that are at least as severe as the given severity level (i.e. HIGH will")
         print("show HIGH and CRITICAL vulnerabilities, but skip over LOW and MEDIUM).")
         print()
-    elif response == "quit":
+    elif response == "done":
         break
     else:
-        params = response.split()
-        if len(params) == 3:
-            print("")
-            print("---------------")
-            print("Searching for vulnerabilities related to")
-            print(params[0].lower() + " version " + params[1] + ", severity " + params[2].upper())
-            print("---------------")
-            search(params[0].lower(), params[1], params[2].upper())
-            print("------SEARCH COMPLETE------")
-
+        responses.append(response)
+finalbody = ""
+for resp in responses:
+    params = resp.split()
+    if len(params) == 3:
+        print("")
+        print("---------------")
+        print("Searching for vulnerabilities related to")
+        print(params[0].lower() + " version " + params[1] + ", severity " + params[2].upper())
+        print("---------------")
+        finalbody += "---------------\n"
+        finalbody += "Searching for vulnerabilities related to\n"
+        finalbody += params[0].lower() + " version " + params[1] + ", severity " + params[2].upper() + "\n"
+        finalbody += "---------------\n"
+        finalbody += search(params[0].lower(), params[1], params[2].upper()) + "\n"
+        print("------SEARCH COMPLETE------")
+# Build Email
+message = "Subject: NVDSearch Results\n\nThe NVDSearch results have come in for the following search terms:\n\n"
+for resp in responses:
+    message += "   " + resp + "\n"
+message += "\n" + finalbody
+# Establish secure connection
+server = smtplib.SMTP("spo-smtp.itron.com", "25")
+server.sendmail("NVDSearcher", "Nate.Holmdahl@itron.com", message)
