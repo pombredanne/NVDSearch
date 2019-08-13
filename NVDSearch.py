@@ -1,11 +1,11 @@
+# Written by Nate Holmdahl for Itron 2019
 import json
-import ssl
 import smtplib
+import os
 from colorama import init, Fore, Back, Style 
 init(convert=True)
 
 FILE = "nvdcve-1.0-modified.json"
-port = 465
 
 
 
@@ -163,59 +163,95 @@ def search(product, version, severity):
                     print("Severity: " + Fore.RED + level)
                 print(Fore.WHITE + "Description: " + vul["cve"]["description"]["description_data"][0].get("value"))
                 print("Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID"))
+                print()
                 result += "Description: " + vul["cve"]["description"]["description_data"][0].get("value") + "\n"
                 result += "Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID") + "\n\n"
     return result
 
+def manual():
+    print(Fore.GREEN + 'NVD Searcher v0.1')
+    print("-----------------")
+    responses = []
+    while True:
+        if len(responses) != 0:
+            print("Search terms:")
+            for resp in responses:
+                print("   " + resp)
+            print()
+        print(Fore.WHITE + "Please enter your search terms in the following format:")
+        print("PRODUCT VERSION SEVERITY")
+        print("Or type 'help' for help")
+        print("or 'done' to begin the search.")
+        print()
+        response = input("Response: ")
+        if response == "help":
+            print()
+            print(Fore.WHITE + "This tool will search an NVD database for all vulnerabilities")
+            print("pertaining to the provided product name, product version, and")
+            print("desired vulnerability severity. Use '-' in place of the version")
+            print("to search all product versions. The tool will find all vulnerabilities")
+            print("that are at least as severe as the given severity level (i.e. HIGH will")
+            print("show HIGH and CRITICAL vulnerabilities, but skip over LOW and MEDIUM).")
+            print()
+        elif response == "done":
+            break
+        else:
+            responses.append(response)
+    finalbody = ""
+    for resp in responses:
+        params = resp.split()
+        if len(params) == 3:
+            print("")
+            print("---------------")
+            print("Searching for vulnerabilities related to")
+            print(params[0].lower() + " version " + params[1] + ", severity " + params[2].upper())
+            print("---------------")
+            finalbody += "---------------\n"
+            finalbody += "Searching for vulnerabilities related to\n"
+            finalbody += params[0].lower() + " version " + params[1] + ", severity " + params[2].upper() + "\n"
+            finalbody += "---------------\n"
+            finalbody += search(params[0].lower(), params[1], params[2].upper()) + "\n"
+            print("------SEARCH COMPLETE------")
+    # Build Email
+    message = "Subject: NVD Search Results\n\nThe NVD Search results have come in for the following search terms:\n\n"
+    for resp in responses:
+        message += "   " + resp + "\n"
+    message += "\nNote: '-' denotes 'all versions'\n\n" + finalbody
+    # Establish secure connection
+    server = smtplib.SMTP("spo-smtp.itron.com", "25") # (smtp server, port number)
+    server.sendmail("NVDItronReport", "Nate.Holmdahl@itron.com", message)
 
-print(Fore.GREEN + 'NVD Searcher v0.1')
-print("-----------------")
-responses = []
-while True:
-    if len(responses) != 0:
-        print("Search terms:")
-        for resp in responses:
-            print("   " + resp)
-        print()
-    print(Fore.WHITE + "Please enter your search terms in the following format:")
-    print("PRODUCT VERSION SEVERITY")
-    print("Or type 'help' for help")
-    print("or 'done' to begin the search.")
-    print()
-    response = input("Response: ")
-    if response == "help":
-        print()
-        print(Fore.WHITE + "This tool will search an NVD database for all vulnerabilities")
-        print("pertaining to the provided product name, product version, and")
-        print("desired vulnerability severity. Use '-' in place of the version")
-        print("to search all product versions. The tool will find all vulnerabilities")
-        print("that are at least as severe as the given severity level (i.e. HIGH will")
-        print("show HIGH and CRITICAL vulnerabilities, but skip over LOW and MEDIUM).")
-        print()
-    elif response == "done":
-        break
-    else:
-        responses.append(response)
-finalbody = ""
-for resp in responses:
-    params = resp.split()
-    if len(params) == 3:
-        print("")
-        print("---------------")
-        print("Searching for vulnerabilities related to")
-        print(params[0].lower() + " version " + params[1] + ", severity " + params[2].upper())
-        print("---------------")
-        finalbody += "---------------\n"
-        finalbody += "Searching for vulnerabilities related to\n"
-        finalbody += params[0].lower() + " version " + params[1] + ", severity " + params[2].upper() + "\n"
-        finalbody += "---------------\n"
-        finalbody += search(params[0].lower(), params[1], params[2].upper()) + "\n"
-        print("------SEARCH COMPLETE------")
-# Build Email
-message = "Subject: NVDSearch Results\n\nThe NVDSearch results have come in for the following search terms:\n\n"
-for resp in responses:
-    message += "   " + resp + "\n"
-message += "\n" + finalbody
-# Establish secure connection
-server = smtplib.SMTP("spo-smtp.itron.com", "25")
-server.sendmail("NVDSearcher", "Nate.Holmdahl@itron.com", message)
+def automatic():
+    f = open("mail-list.txt", "r")
+    lines = f.readlines()
+    f.close()
+    for i in range(len(lines)):
+        if lines[i].strip() == ":start":
+            searches = []
+            email = lines[i+1].strip()
+            j = i + 2
+            while lines[j].strip() != ":end":
+                searches.append(lines[j].strip())
+                j += 1
+            print(email)
+            print(searches)
+            print()
+            finalbody = ""
+            for s in searches:
+                params = s.split()
+                if len(params) == 3:
+                    finalbody += "---------------\n"
+                    finalbody += "Searching for vulnerabilities related to\n"
+                    finalbody += params[0].lower() + " version " + params[1] + ", severity " + params[2].upper() + "\n"
+                    finalbody += "---------------\n"
+                    finalbody += search(params[0].lower(), params[1], params[2].upper()) + "\n"
+            # Build Email
+            message = "Subject: NVD Search Results\n\nThe NVD Search results have come in for the following search terms:\n\n"
+            for resp in searches:
+                message += "   " + resp + "\n"
+            message += "\nNote: '-' denotes 'all versions'\n\n" + finalbody
+            # Establish secure connection
+            server = smtplib.SMTP("spo-smtp.itron.com", "25") # (smtp server, port number)
+            server.sendmail("NVDItronReport", email, message)
+# manual()
+automatic()
