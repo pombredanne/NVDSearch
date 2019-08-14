@@ -2,33 +2,62 @@
 import json
 import smtplib
 import os
-# import urllib2
 import requests
 import io
 import zipfile
+import sys
 from colorama import init, Fore, Back, Style 
 init(convert=True)
 
 FILE = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.zip"
+SMTP = "spo-smtp.itron.com"
+
+# This is the mailing list and it must be formatted a specific way.
+# Here is an example of how to format one entry in the mailing list:
+# 
+# :start
+# Nate.Holmdahl@itron.com
+# linux 3.0 HIGH
+# debian - HIGH
+# :end
+# 
+# Note the scructure of the search term, PRODUCT VERSION SEVERITY.
+# Use '-' in place of the version to search all versions.
+# You can have as many search terms (i.e. "linux 3.0 HIGH") per
+# entry as you want, but you must to have an entry for each
+# person that needs to be on the mailing list.
+mail_list = """
+        :start
+        email1@itron.com
+        linux 3.0 HIGH
+        debian - HIGH
+        :end
+        :start
+        email2@itron.com
+        apache - HIGH
+        cpanel 62.0.4 HIGH
+        :end
+"""
 
 
+# Downloads a zip from a url and returns a generator over that unzipped file
+# Use var = next(generator_name) to access file. Url parameter is a string.
 def download_extract_zip(url):
-    """
-    Download a ZIP file and extract its contents in memory
-    yields (filename, file-like object) pairs
-    """
     response = requests.get(url)
     with zipfile.ZipFile(io.BytesIO(response.content)) as thezip:
         for zipinfo in thezip.infolist():
             with thezip.open(zipinfo) as thefile:
                 yield thefile
 
-
+# Returns the low and high version number in a vulnerbility range.
 def get_ver_range(vul):
     return vul[0].get("version_value"), vul[len(vul) - 1].get("version_value")
 
+# Tests if a given version (string) is inbetween or out of the low 
+# and high values of a version range. All parameters are strings.
+# Returns boolean
 def in_ver_range(ver, low, high):
-    if ver == '-':
+    if ver == '-': # '-' means "All Versions"
         return True
     ver_lst = []
     for c in ver:
@@ -54,13 +83,15 @@ def in_ver_range(ver, low, high):
                 return False
     if len(ver) > len(high):
         return False
-
     return True
 
-# Searches a database for a vulnerability
+# Searches a database for a vulnerability.
+# All parameters are strings.
 def search(product, version, severity):
+    # Check severity
     print()
     product = product.lower()
+    severity = severity.upper()
     sev = 0
     if severity == "LOW":
         sev = 0.1
@@ -73,6 +104,8 @@ def search(product, version, severity):
     else:
         print("Please specify the severity as either LOW, MEDIUM, HIGH, or CRITICAL")
         return
+    
+    # Download and unzip the .json CPE file
     f = download_extract_zip(FILE)
     fi = next(f)
     x = json.load(fi)
@@ -142,7 +175,11 @@ def search(product, version, severity):
                 result += "Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID") + "\n\n"
     return result
 
+# Opens a wizard to manually search for vulnerabilities.
 def manual():
+    
+    destination = input("Please type the destination email: ")
+
     print(Fore.GREEN + 'NVD Searcher v0.1')
     print("-----------------")
     responses = []
@@ -192,13 +229,14 @@ def manual():
         message += "   " + resp + "\n"
     message += "\nNote: '-' denotes 'all versions'\n\n" + finalbody
     # Establish secure connection
-    server = smtplib.SMTP("spo-smtp.itron.com", "25") # (smtp server, port number)
-    server.sendmail("NVDItronReport", "Nate.Holmdahl@itron.com", message)
+    server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
+    server.sendmail("NVDItronReport", destination, message)
 
+# Reads a mailing list (located at the top of this script) and automatically
+# searches the most recent NVD database. Will build and send a formatted email
+# to all members of the mailing list. This is the main usage of this script.
 def automatic():
-    f = open("mail-list.txt", "r")
-    lines = f.readlines()
-    f.close()
+    lines = mail_list.splitlines()
     for i in range(len(lines)):
         if lines[i].strip() == ":start":
             searches = []
@@ -207,9 +245,6 @@ def automatic():
             while lines[j].strip() != ":end":
                 searches.append(lines[j].strip())
                 j += 1
-            print(email)
-            print(searches)
-            print()
             finalbody = ""
             for s in searches:
                 params = s.split()
@@ -225,14 +260,12 @@ def automatic():
                 message += "   " + resp + "\n"
             message += "\nNote: '-' denotes 'all versions'\n\n" + finalbody
             # Establish secure connection
-            server = smtplib.SMTP("spo-smtp.itron.com", "25") # (smtp server, port number)
-            print(email)
+            server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
             server.sendmail("NVDItronReport", email, message)
 
-
-automatic()
-
-
-
-
-    
+if sys.argv[1] == "--auto" or sys.argv[1] == "-a":
+    automatic()
+elif sys.argv[1] == "--manual" or sys.argv[1] == "-m":
+    manual()
+else:
+    print("Please use the flags \"--auto\" or \"manual\" to run this script.")
