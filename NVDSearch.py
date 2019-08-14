@@ -26,11 +26,12 @@ SMTP = "spo-smtp.itron.com"
 # You can have as many search terms (i.e. "linux 3.0 HIGH") per
 # entry as you want, but you must to have an entry for each
 # person that needs to be on the mailing list.
+        
 mail_list = """
         :start
         email1@itron.com
         linux 3.0 HIGH
-        debian - HIGH
+        debian - LOW
         :end
         :start
         email2@itron.com
@@ -263,7 +264,9 @@ def automatic():
             server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
             server.sendmail("NVDItronReport", email, message)
 
-if sys.argv[1] == "--auto" or sys.argv[1] == "-a":
+if len(sys.argv) == 1:
+    print("Please use the flags \"--auto\" or \"manual\" to run this script.")
+elif sys.argv[1] == "--auto" or sys.argv[1] == "-a":
     automatic()
 elif sys.argv[1] == "--manual" or sys.argv[1] == "-m":
     manual()
