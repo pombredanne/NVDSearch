@@ -2,54 +2,27 @@
 import json
 import smtplib
 import os
+# import urllib2
+import requests
+import io
+import zipfile
 from colorama import init, Fore, Back, Style 
 init(convert=True)
 
-FILE = "nvdcve-1.0-modified.json"
+FILE = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.zip"
 
 
+def download_extract_zip(url):
+    """
+    Download a ZIP file and extract its contents in memory
+    yields (filename, file-like object) pairs
+    """
+    response = requests.get(url)
+    with zipfile.ZipFile(io.BytesIO(response.content)) as thezip:
+        for zipinfo in thezip.infolist():
+            with thezip.open(zipinfo) as thefile:
+                yield thefile
 
-# Reutrns the count of all low, medium, high, and critical severity CPEs
-def count_severity():
-    with open(FILE, "r") as f:
-        data = json.load(f)
-
-    x = data["CVE_Items"]
-    low = 0
-    med = 0
-    high = 0
-    critical = 0
-
-    for vul in x:
-        if "baseMetricV2" in vul["impact"].keys():
-            if vul["impact"]["baseMetricV2"].get("severity") == "LOW":
-                low += 1
-            elif vul["impact"]["baseMetricV2"].get("severity") == "MEDIUM":
-                med += 1
-            elif vul["impact"]["baseMetricV2"].get("severity") == "HIGH":
-                high += 1
-        if "baseMetricV3" in vul["impact"].keys():
-            if vul["impact"]["baseMetricV3"].get("severity") == "LOW":
-                low += 1
-            elif vul["impact"]["baseMetricV3"].get("severity") == "MEDIUM":
-                med += 1
-            elif vul["impact"]["baseMetricV3"].get("severity") == "HIGH":
-                high += 1
-
-    print("LOW: " + str(low))
-    print("MEDIUM: " + str(med))
-    print("HIGH: " + str(high))
-
-    return low, med, high
-
-def get_vendors():
-    with open(FILE, "r") as f:
-        data = json.load(f)
-
-    x = data["CVE_Items"]
-    for vul in x:
-        if len(vul["cve"]["affects"]["vendor"]["vendor_data"]) > 0:
-            print(vul["cve"]["affects"]["vendor"]["vendor_data"][0].get("vendor_name"))
 
 def get_ver_range(vul):
     return vul[0].get("version_value"), vul[len(vul) - 1].get("version_value")
@@ -100,8 +73,9 @@ def search(product, version, severity):
     else:
         print("Please specify the severity as either LOW, MEDIUM, HIGH, or CRITICAL")
         return
-    with open(FILE, "r") as f:
-        x = json.load(f)
+    f = download_extract_zip(FILE)
+    fi = next(f)
+    x = json.load(fi)
 
     data = x["CVE_Items"]
     vuls = []
@@ -252,6 +226,13 @@ def automatic():
             message += "\nNote: '-' denotes 'all versions'\n\n" + finalbody
             # Establish secure connection
             server = smtplib.SMTP("spo-smtp.itron.com", "25") # (smtp server, port number)
+            print(email)
             server.sendmail("NVDItronReport", email, message)
-            
+
+
 automatic()
+
+
+
+
+    
