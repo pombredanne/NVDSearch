@@ -17,26 +17,28 @@ SMTP = "spo-smtp.itron.com"
 # 
 # :start
 # Nate.Holmdahl@itron.com
-# linux 3.0 HIGH
-# debian - HIGH
+# linux_kernel 3.0 HIGH
+# debian_linux - HIGH
 # :end
 # 
 # Note the scructure of the search term, PRODUCT VERSION SEVERITY.
 # Use '-' in place of the version to search all versions.
-# You can have as many search terms (i.e. "linux 3.0 HIGH") per
+# You can have as many search terms (i.e. "linux_kernel 3.0 HIGH") per
 # entry as you want, but you must to have an entry for each
 # person that needs to be on the mailing list.
+
+# This program specifically searches for the product_name value.
         
 mail_list = """
         :start
         email1@itron.com
-        linux 3.0 HIGH
-        debian - LOW
+        linux_kernel 3.0 HIGH
+        debian_linux - LOW
         :end
         :start
         email2@itron.com
-        apache - HIGH
-        cpanel 62.0.4 HIGH
+        linux_kernel 3.0 HIGH
+        debian_linux - LOW
         :end
 """
 
@@ -116,7 +118,7 @@ def search(product, version, severity):
     result = ""
     for vul in data:
         valid = True
-        if len(vul["cve"]["affects"]["vendor"]["vendor_data"]) > 0 and (vul["cve"]["affects"]["vendor"]["vendor_data"][0].get("vendor_name") == product):  # If the vulnerability has vendor data and matches our search
+        if len(vul["cve"]["affects"]["vendor"]["vendor_data"]) > 0 and len(vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"]) > 0 and (vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"][0].get("product_name") == product):  # If the vulnerability has vendor data and matches our search
             low, high = get_ver_range(vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"][0]["version"]["version_data"])
             if low == "-":  # All versions
                 valid = True
