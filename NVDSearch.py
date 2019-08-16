@@ -267,10 +267,10 @@ def automatic():
             server.sendmail("NVDItronReport", email, message)
 
 if len(sys.argv) == 1:
-    print("Please use the flags \"--auto\" or \"manual\" to run this script.")
+    print("Please use the flags \"--auto\" or \"--manual\" to run this script.")
 elif sys.argv[1] == "--auto" or sys.argv[1] == "-a":
     automatic()
 elif sys.argv[1] == "--manual" or sys.argv[1] == "-m":
     manual()
 else:
-    print("Please use the flags \"--auto\" or \"manual\" to run this script.")
+    print("Please use the flags \"--auto\" or \"--manual\" to run this script.")
