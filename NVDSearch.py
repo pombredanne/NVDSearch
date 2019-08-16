@@ -21,7 +21,7 @@ SMTP = "spo-smtp.itron.com"
 # debian_linux - HIGH
 # :end
 # 
-# Note the scructure of the search term, PRODUCT VERSION SEVERITY.
+# Note the scructure of the search term; PRODUCT VERSION SEVERITY.
 # Use '-' in place of the version to search all versions.
 # You can have as many search terms (i.e. "linux_kernel 3.0 HIGH") per
 # entry as you want, but you must to have an entry for each
