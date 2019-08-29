@@ -1,4 +1,5 @@
 # Written by Nate Holmdahl for Itron 2019
+# This is the unmodified version
 import json
 import smtplib
 import os
