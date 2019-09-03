@@ -230,7 +230,7 @@ def manual():
 # to all members of the mailing list. This is the main usage of this script.
 def automatic():
     # Read mail recipients and search terms from the config file
-    f = open("/data/config","r")
+    f = open("../data/config","r")
     mail_list = f.read()
 
     lines = mail_list.splitlines()
