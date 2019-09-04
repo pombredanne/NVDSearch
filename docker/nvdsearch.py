@@ -231,12 +231,12 @@ def manual():
         server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
         server.sendmail("NVDItronReport", destination, message)
 
-# Reads the config file (/data/config) and automatically
+# Reads the config file and automatically
 # searches the most recent NVD database. Will build and send a formatted email
 # to all members of the mailing list. This is the main usage of this script.
 def automatic():
     # Read mail recipients and search terms from the config file
-    f = open("/data/config","r")
+    f = open("config","r")
     mail_list = f.read()
 
     lines = mail_list.splitlines()

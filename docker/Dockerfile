@@ -11,6 +11,7 @@ RUN pip3 install requests
 RUN pip3 install colorama
 
 ADD nvdsearch.py /
+ADD config /
 
 # Entrypoint
 ADD entrypoint.sh /

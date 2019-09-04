@@ -14,9 +14,9 @@ else
 fi
 
 
-if [ ! -f ../data/config ]
+if [ ! -f config ]
 then
-	echo "Please setup config file (see config.sample) in ../data"
+	echo "Please setup config file"
 	exit 0
 fi
 
@@ -24,7 +24,7 @@ BASEDIR=$(dirname "$0")
 cd $BASEDIR
 
 CMDLINE="docker run $INTERACTIVE $NAME \
--v "$PWD/../data":/data \
+-v "$PWD":/ \
 nvdsearch $@"
 
 echo "Running: $CMDLINE"
