@@ -21,17 +21,17 @@ SMTP = "192.168.19.25"
 # 
 # :start
 # Nate.Holmdahl@itron.com
-# linux_kernel 3.0 HIGH
-# debian_linux - HIGH
+# linux linux_kernel 3.0 HIGH
+# cisco * * HIGH
 # :end
 # 
-# Note the scructure of the search term; PRODUCT VERSION SEVERITY.
-# Use '-' in place of the version to search all versions.
-# You can have as many search terms (i.e. "linux_kernel 3.0 HIGH") per
+# Note the scructure of the search term; VENDOR PRODUCT VERSION SEVERITY.
+# Use '*' in place of the version to search all versions.
+# You can have as many search terms (i.e. "linux linux_kernel 3.0 HIGH") per
 # entry as you want, but you must to have an entry for each
 # person that needs to be on the mailing list.
 
-# This program specifically searches for the product_name value.
+# This program specifically searches for the vendor_name and product_name values.
 
 # Downloads a zip from a url and returns a generator over that unzipped file
 # Use var = next(generator_name) to access file. Url parameter is a string.
@@ -50,7 +50,7 @@ def get_ver_range(vul):
 # and high values of a version range. All parameters are strings.
 # Returns boolean
 def in_ver_range(ver, low, high):
-    if ver == '-': # '-' means "All Versions"
+    if ver == '*': # '*' means "All Versions"
         return True
     ver_lst = []
     for c in ver:
@@ -80,7 +80,7 @@ def in_ver_range(ver, low, high):
 
 # Searches a database for a vulnerability.
 # All parameters are strings.
-def search(product, version, severity):
+def search(vendor, product, version, severity):
     # Check severity
     print()
     product = product.lower()
@@ -108,69 +108,70 @@ def search(product, version, severity):
     result = ""
     for vul in data:
         valid = True
-        if len(vul["cve"]["affects"]["vendor"]["vendor_data"]) > 0 and len(vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"]) > 0 and (vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"][0].get("product_name") == product):  # If the vulnerability has vendor data and matches our search
-            low, high = get_ver_range(vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"][0]["version"]["version_data"])
-            if low == "-":  # All versions
-                valid = True
-            elif not in_ver_range(version, low, high): # Version
-                valid = False
-            cvss_ver = 3
-            if "baseMetricV3" in vul["impact"].keys():
-                if vul["impact"]["baseMetricV3"]["cvssV3"].get("baseScore") < sev:
-                    valid = False
-            elif "baseMetricV2" in vul["impact"].keys():
-                cvss_ver = 2
-                if severity == "LOW":
-                    sev = 0.0
-                elif severity == "MEDIUM":
-                    sev = 4.0
-                elif severity == "HIGH":
-                    sev = 7.0
-                if vul["impact"]["baseMetricV2"]["cvssV2"].get("baseScore") < sev:
-                    valid = False
-            if valid:
-                if cvss_ver == 3:
-                    score = vul["impact"]["baseMetricV3"]["cvssV3"].get("baseScore")
-                    level = ""
-                    if score < 4:
-                        level = "LOW"
-                    elif score < 7:
-                        level = "MEDIUM"
-                    elif score < 9:
-                        level = "HIGH"
-                    else:
-                        level = "CRITICAL"
-                elif cvss_ver == 2:
-                    score = vul["impact"]["baseMetricV2"]["cvssV2"].get("baseScore")
-                    level = ""
-                    if score < 4:
-                        level = "LOW"
-                    elif score < 7:
-                        level = "MEDIUM"
-                    else:
-                        level = "HIGH"
-                if level == "LOW":
-                    result += "Severity: " + level + "\n"
-                    print("Severity: " + Fore.YELLOW + level)
-                elif level == "MEDIUM":
-                    result += "Severity: " + level + "\n"
-                    print("Severity: " + Fore.YELLOW + level)
-                elif level == "HIGH":
-                    result += "Severity: " + level + "\n"
-                    print("Severity: " + Fore.RED + level)
-                elif level == "CRITICAL":
-                    result += "Severity: " + level + "\n"
-                    print("Severity: " + Fore.RED + level)
-                print(Fore.WHITE + "Description: " + vul["cve"]["description"]["description_data"][0].get("value"))
-                print("Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID"))
-                print()
-                result += "Description: " + vul["cve"]["description"]["description_data"][0].get("value") + "\n"
-                result += "Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID") + "\n\n"
+        if len(vul["cve"]["affects"]["vendor"]["vendor_data"]) > 0 and len(vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"]) > 0:  # If the vulnerability has vendor data and product data
+            if vul["cve"]["affects"]["vendor"]["vendor_data"][0].get("vendor_name") == vendor or vendor == "*":
+                if vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"][0].get("product_name") == product or product == "*":  
+                    low, high = get_ver_range(vul["cve"]["affects"]["vendor"]["vendor_data"][0]["product"]["product_data"][0]["version"]["version_data"])
+                    if low == "-":  # All versions
+                        valid = True
+                    elif not in_ver_range(version, low, high): # Version
+                        valid = False
+                    cvss_ver = 3
+                    if "baseMetricV3" in vul["impact"].keys():
+                        if vul["impact"]["baseMetricV3"]["cvssV3"].get("baseScore") < sev:
+                            valid = False
+                    elif "baseMetricV2" in vul["impact"].keys():
+                        cvss_ver = 2
+                        if severity == "LOW":
+                            sev = 0.0
+                        elif severity == "MEDIUM":
+                            sev = 4.0
+                        elif severity == "HIGH":
+                            sev = 7.0
+                        if vul["impact"]["baseMetricV2"]["cvssV2"].get("baseScore") < sev:
+                            valid = False
+                    if valid:
+                        if cvss_ver == 3:
+                            score = vul["impact"]["baseMetricV3"]["cvssV3"].get("baseScore")
+                            level = ""
+                            if score < 4:
+                                level = "LOW"
+                            elif score < 7:
+                                level = "MEDIUM"
+                            elif score < 9:
+                                level = "HIGH"
+                            else:
+                                level = "CRITICAL"
+                        elif cvss_ver == 2:
+                            score = vul["impact"]["baseMetricV2"]["cvssV2"].get("baseScore")
+                            level = ""
+                            if score < 4:
+                                level = "LOW"
+                            elif score < 7:
+                                level = "MEDIUM"
+                            else:
+                                level = "HIGH"
+                        if level == "LOW":
+                            result += "Severity: " + level + "\n"
+                            print("Severity: " + Fore.YELLOW + level)
+                        elif level == "MEDIUM":
+                            result += "Severity: " + level + "\n"
+                            print("Severity: " + Fore.YELLOW + level)
+                        elif level == "HIGH":
+                            result += "Severity: " + level + "\n"
+                            print("Severity: " + Fore.RED + level)
+                        elif level == "CRITICAL":
+                            result += "Severity: " + level + "\n"
+                            print("Severity: " + Fore.RED + level)
+                        print(Fore.WHITE + "Description: " + vul["cve"]["description"]["description_data"][0].get("value"))
+                        print("Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID"))
+                        print()
+                        result += "Description: " + vul["cve"]["description"]["description_data"][0].get("value") + "\n"
+                        result += "Link: http://nvd.nist.gov/vuln/detail/" + vul["cve"]["CVE_data_meta"].get("ID") + "\n\n"
     return result
 
 # Opens a wizard to manually search for vulnerabilities.
 def manual():
-    
     destination = input("Please type the destination email: ")
 
     print(Fore.GREEN + 'NVD Searcher v0.1')
@@ -183,7 +184,7 @@ def manual():
                 print("   " + resp)
             print()
         print(Fore.WHITE + "Please enter your search terms in the following format:")
-        print("PRODUCT VERSION SEVERITY")
+        print("VENDOR PRODUCT VERSION SEVERITY")
         print("Or type 'help' for help")
         print("or 'done' to begin the search.")
         print()
@@ -192,7 +193,7 @@ def manual():
             print()
             print(Fore.WHITE + "This tool will search an NVD database for all vulnerabilities")
             print("pertaining to the provided product name, product version, and")
-            print("desired vulnerability severity. Use '-' in place of the version")
+            print("desired vulnerability severity. Use '*' in place of the version")
             print("to search all product versions. The tool will find all vulnerabilities")
             print("that are at least as severe as the given severity level (i.e. HIGH will")
             print("show HIGH and CRITICAL vulnerabilities, but skip over LOW and MEDIUM).")
@@ -202,30 +203,35 @@ def manual():
         else:
             responses.append(response)
     finalbody = ""
+    send = False
     for resp in responses:
         params = resp.split()
-        if len(params) == 3:
+        if len(params) == 4:
             print("")
             print("---------------")
             print("Searching for vulnerabilities related to")
-            print(params[0].lower() + " version " + params[1] + ", severity " + params[2].upper())
+            print(params[0].lower() + " " + params[1].lower() + " version " + params[2] + ", severity " + params[3].upper())
             print("---------------")
             finalbody += "---------------\n"
             finalbody += "Searching for vulnerabilities related to\n"
-            finalbody += params[0].lower() + " version " + params[1] + ", severity " + params[2].upper() + "\n"
+            finalbody += params[0].lower() + " " + params[1].lower() + " version " + params[2] + ", severity " + params[3].upper() + "\n"
             finalbody += "---------------\n"
-            finalbody += search(params[0].lower(), params[1], params[2].upper()) + "\n"
+            stri = search(params[0].lower(), params[1].lower(), params[2], params[3].upper()) + "\n"
+            if stri != "\n":
+                send = True
+            finalbody += stri
             print("------SEARCH COMPLETE------")
     # Build Email
     message = "Subject: NVD Search Results\n\nThe NVD Search results have come in for the following search terms:\n\n"
     for resp in responses:
         message += "   " + resp + "\n"
-    message += "\nNote: '-' denotes 'all versions'\n\n" + finalbody
-    # Establish secure connection
-    server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
-    server.sendmail("NVDItronReport", destination, message)
+    message += "\nNote: '*' denotes that a field is ignored'\n\n" + finalbody
+    if send:
+        # Establish secure connection
+        server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
+        server.sendmail("NVDItronReport", destination, message)
 
-# Reads a mailing list (located at the top of this script) and automatically
+# Reads the config file (/data/config) and automatically
 # searches the most recent NVD database. Will build and send a formatted email
 # to all members of the mailing list. This is the main usage of this script.
 def automatic():
@@ -243,22 +249,27 @@ def automatic():
                 searches.append(lines[j].strip())
                 j += 1
             finalbody = ""
+            send = False
             for s in searches:
                 params = s.split()
-                if len(params) == 3:
+                if len(params) == 4:
                     finalbody += "---------------\n"
                     finalbody += "Searching for vulnerabilities related to\n"
-                    finalbody += params[0].lower() + " version " + params[1] + ", severity " + params[2].upper() + "\n"
+                    finalbody += params[0].lower() + " " + params[1].lower() + " version " + params[2] + ", severity " + params[3].upper() + "\n"
                     finalbody += "---------------\n"
-                    finalbody += search(params[0].lower(), params[1], params[2].upper()) + "\n"
+                    stri = search(params[0].lower(), params[1].lower(), params[2], params[3].upper()) + "\n"
+                    if stri != "\n":
+                        send = True
+                    finalbody += stri
             # Build Email
             message = "Subject: NVD Search Results\n\nThe NVD Search results have come in for the following search terms:\n\n"
             for resp in searches:
                 message += "   " + resp + "\n"
-            message += "\nNote: '-' denotes 'all versions'\n\n" + finalbody
-            # Establish secure connection
-            server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
-            server.sendmail("NVDItronReport", email, message)
+            message += "\nNote: '*' denotes that a field is ignored\n\n" + finalbody
+            if send:
+                # Establish secure connection
+                server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
+                server.sendmail("NVDItronReport", email, message)
 
 if len(sys.argv) == 1:
     print("Please use the flags \"--auto\" or \"--manual\" to run this script.")
