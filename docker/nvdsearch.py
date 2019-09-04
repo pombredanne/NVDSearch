@@ -230,6 +230,8 @@ def manual():
         # Establish secure connection
         server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
         server.sendmail("NVDItronReport", destination, message)
+    else:
+                print("Search found no results.")
 
 # Reads the config file and automatically
 # searches the most recent NVD database. Will build and send a formatted email
@@ -270,6 +272,8 @@ def automatic():
                 # Establish secure connection
                 server = smtplib.SMTP(SMTP, "25") # (smtp server, port number)
                 server.sendmail("NVDItronReport", email, message)
+            else:
+                print("Search found no results.")
 
 if len(sys.argv) == 1:
     print("Please use the flags \"--auto\" or \"--manual\" to run this script.")
