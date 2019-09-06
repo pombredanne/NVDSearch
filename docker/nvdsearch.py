@@ -27,7 +27,7 @@ SMTP = "192.168.19.25"
 # :end
 # 
 # Note the scructure of the search term; VENDOR PRODUCT VERSION SEVERITY.
-# Use '*' in place of the version to search all versions.
+# Use '*' in place of a search term to ignore that field (except for SEVERITY).
 # You can have as many search terms (i.e. "linux linux_kernel 3.0 HIGH") per
 # entry as you want, but you must to have an entry for each
 # person that needs to be on the mailing list.
