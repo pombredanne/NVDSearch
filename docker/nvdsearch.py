@@ -9,6 +9,7 @@ import sys
 from colorama import init, Fore, Back, Style 
 init(convert=True)
 
+# This is the address that hosts the nvd json feed
 FILE = "https://nvd.nist.gov/feeds/json/cve/1.0/nvdcve-1.0-recent.json.zip"
 
 # NOTE: In a docker container, sometimes this address does not resolve correctly
